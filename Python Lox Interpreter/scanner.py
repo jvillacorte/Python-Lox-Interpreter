@@ -45,6 +45,34 @@ class Scanner:
         if c == "/":
             self.add_token(TokenType.SLASH)
             return
+        if c == "!":
+            if self.peek() == "=":
+                self.advance()
+                self.add_token(TokenType.BANG_EQUAL)
+            else:
+                self.add_token(TokenType.BANG)
+            return
+        if c == "=":
+            if self.peek() == "=":
+                self.advance()
+                self.add_token(TokenType.EQUAL_EQUAL)
+            else:
+                error(self.line, msg="Unexpected character '='. Only '==' is supported.")
+            return
+        if c == "<":
+            if self.peek() == "=":
+                self.advance()
+                self.add_token(TokenType.LESS_EQUAL)
+            else:
+                self.add_token(TokenType.LESS)
+            return
+        if c == ">":
+            if self.peek() == "=":
+                self.advance()
+                self.add_token(TokenType.GREATER_EQUAL)
+            else:
+                self.add_token(TokenType.GREATER)
+            return
         if c == ";":
             self.add_token(TokenType.SEMICOLON)
             return
@@ -79,8 +107,16 @@ class Scanner:
             self.advance()
 
         text = self.source[self.start:self.current]
-        if text == "print":
-            self.add_token(TokenType.PRINT)
+        keywords = {
+            "print": TokenType.PRINT,
+            "and": TokenType.AND,
+            "or": TokenType.OR,
+            "true": TokenType.TRUE,
+            "false": TokenType.FALSE,
+        }
+        
+        if text in keywords:
+            self.add_token(keywords[text])
             return
 
         error(self.line, msg=f"Unexpected identifier '{text}'.")

@@ -1,5 +1,5 @@
 from token_type import TokenType
-from expressions import Binary, Grouping, Literal
+from expressions import Binary, Grouping, Literal, Logical, Unary
 from statements import Print, Stmt
 from error import ParseErr, error
 
@@ -35,7 +35,47 @@ class Parser:
 
     #parses expression, string literals rn
     def expression(self):
-        return self.term()
+        return self.or_expression()
+
+    def or_expression(self):
+        expr = self.and_expression()
+
+        while self.match(TokenType.OR):
+            operator = self.previous()
+            right = self.and_expression()
+            expr = Logical(expr, operator, right)
+
+        return expr
+
+    def and_expression(self):
+        expr = self.equality()
+
+        while self.match(TokenType.AND):
+            operator = self.previous()
+            right = self.equality()
+            expr = Logical(expr, operator, right)
+
+        return expr
+
+    def equality(self):
+        expr = self.comparison()
+
+        while self.match(TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL):
+            operator = self.previous()
+            right = self.comparison()
+            expr = Binary(expr, operator, right)
+
+        return expr
+
+    def comparison(self):
+        expr = self.term()
+
+        while self.match(TokenType.GREATER, TokenType.GREATER_EQUAL, TokenType.LESS, TokenType.LESS_EQUAL):
+            operator = self.previous()
+            right = self.term()
+            expr = Binary(expr, operator, right)
+
+        return expr
 
     def term(self):
         expr = self.factor()
@@ -48,16 +88,30 @@ class Parser:
         return expr
 
     def factor(self):
-        expr = self.primary()
+        expr = self.unary()
 
         while self.match(TokenType.STAR, TokenType.SLASH):
             operator = self.previous()
-            right = self.primary()
+            right = self.unary()
             expr = Binary(expr, operator, right)
 
         return expr
 
+    def unary(self):
+        if self.match(TokenType.BANG, TokenType.MINUS):
+            operator = self.previous()
+            right = self.unary()
+            return Unary(operator, right)
+
+        return self.primary()
+
     def primary(self):
+        if self.match(TokenType.TRUE):
+            return Literal(True)
+
+        if self.match(TokenType.FALSE):
+            return Literal(False)
+
         if self.match(TokenType.LEFT_PAREN):
             expr = self.expression()
             self.consume(TokenType.RIGHT_PAREN, "Expected ')' after expression.")
@@ -67,7 +121,7 @@ class Parser:
             return Literal(self.previous().literal)
 
         tok = self.peek()
-        error(tok.line, tok, "Expected string or number literal.")
+        error(tok.line, tok, "Expected string, number, true, false, or '('.")
         raise ParseErr()
 
 

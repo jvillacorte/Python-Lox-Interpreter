@@ -1,5 +1,5 @@
 from visitor import Visitor
-from expressions import Binary, Grouping, Literal
+from expressions import Binary, Grouping, Literal, Logical, Unary
 from statements import Print
 from token_type import TokenType
 from error import RuntimeErr, error
@@ -21,6 +21,26 @@ class Interpreter(Visitor):
         left = expr.left.accept(self)
         right = expr.right.accept(self)
 
+        # Comparison operators
+        if expr.operator.type in (TokenType.GREATER, TokenType.GREATER_EQUAL, TokenType.LESS, TokenType.LESS_EQUAL):
+            if not isinstance(left, float) or not isinstance(right, float):
+                raise RuntimeErr(expr.operator, "Operands for comparison must be numbers.")
+            if expr.operator.type == TokenType.GREATER:
+                return left > right
+            if expr.operator.type == TokenType.GREATER_EQUAL:
+                return left >= right
+            if expr.operator.type == TokenType.LESS:
+                return left < right
+            if expr.operator.type == TokenType.LESS_EQUAL:
+                return left <= right
+
+        # Equality operators
+        if expr.operator.type == TokenType.EQUAL_EQUAL:
+            return self.is_equal(left, right)
+        if expr.operator.type == TokenType.BANG_EQUAL:
+            return not self.is_equal(left, right)
+
+        # Arithmetic operators
         if not isinstance(left, float) or not isinstance(right, float):
             raise RuntimeErr(expr.operator, "Operands for '+', '-', '*', and '/' must be numbers.")
 
@@ -43,10 +63,48 @@ class Interpreter(Visitor):
     def visit_literal_expr(self, expr: Literal) -> object:
         return expr.value
 
+    def visit_logical_expr(self, expr: Logical) -> object:
+        left = expr.left.accept(self)
+
+        if expr.operator.type == TokenType.OR:
+            if self.is_truthy(left):
+                return left
+        else:  # AND
+            if not self.is_truthy(left):
+                return left
+
+        return expr.right.accept(self)
+
+    def visit_unary_expr(self, expr: Unary) -> object:
+        right = expr.right.accept(self)
+
+        if expr.operator.type == TokenType.BANG:
+            return not self.is_truthy(right)
+        if expr.operator.type == TokenType.MINUS:
+            if not isinstance(right, float):
+                raise RuntimeErr(expr.operator, "Operand for unary '-' must be a number.")
+            return -right
+
+        raise RuntimeErr(expr.operator, "Unknown unary operator.")
+
+    def is_truthy(self, value: object) -> bool:
+        if value is None or value is False:
+            return False
+        return True
+
+    def is_equal(self, left: object, right: object) -> bool:
+        if type(left) != type(right):
+            return False
+        return left == right
+
     def stringify(self, value: object) -> str:
+        if isinstance(value, bool):
+            return "true" if value else "false"
         if isinstance(value, float):
             text = str(value)
             if text.endswith(".0"):
                 return text[:-2]
             return text
+        if value is None:
+            return "nil"
         return str(value)
