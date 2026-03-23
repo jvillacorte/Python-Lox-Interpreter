@@ -1,6 +1,6 @@
 from token_type import TokenType
-from expressions import Binary, Grouping, Literal, Logical, Unary
-from statements import Print, Stmt
+from expressions import Assign, Binary, Grouping, Literal, Logical, Unary, Variable
+from statements import Expression, Print, Stmt, Var
 from error import ParseErr, error
 
 
@@ -15,17 +15,27 @@ class Parser:
     def parse(self) -> list[Stmt]:
         stmts: list[Stmt] = []
         while not self.tok_end():
-            stmts.append(self.statement())
+            stmts.append(self.declaration())
         return stmts
 
-    #parses statement, worky only print
+    def declaration(self) -> Stmt:
+        if self.match(TokenType.VAR):
+            return self.var_declaration()
+        return self.statement()
+
+    def var_declaration(self) -> Stmt:
+        name = self.consume(TokenType.IDENTIFIER, "Expected variable name.")
+        initializer = None
+        if self.match(TokenType.EQUAL):
+            initializer = self.expression()
+        self.consume(TokenType.SEMICOLON, "Expected ';' after variable declaration.")
+        return Var(name, initializer)
+
+    #parses statement, currently print statements only
     def statement(self) -> Stmt:
         if self.match(TokenType.PRINT):
             return self.print_statement()
-
-        tok = self.peek()
-        error(tok.line, tok, "Expected 'print'.")
-        raise ParseErr()
+        return self.expression_statement()
 
     #parse body of print statement, calls expression() for value, then checks for semicolon
     def print_statement(self) -> Stmt:
@@ -33,9 +43,29 @@ class Parser:
         self.consume(TokenType.SEMICOLON, "Expected ';' after value.")
         return Print(value)
 
+    def expression_statement(self) -> Stmt:
+        expr = self.expression()
+        self.consume(TokenType.SEMICOLON, "Expected ';' after expression.")
+        return Expression(expr)
+
     #parses expression, string literals rn
     def expression(self):
-        return self.or_expression()
+        return self.assignment()
+
+    def assignment(self):
+        expr = self.or_expression()
+
+        if self.match(TokenType.EQUAL):
+            equals = self.previous()
+            value = self.assignment()
+
+            if isinstance(expr, Variable):
+                return Assign(expr.name, value)
+
+            error(equals.line, equals, "Invalid assignment target.")
+            raise ParseErr()
+
+        return expr
 
     def or_expression(self):
         expr = self.and_expression()
@@ -112,6 +142,12 @@ class Parser:
         if self.match(TokenType.FALSE):
             return Literal(False)
 
+        if self.match(TokenType.NIL):
+            return Literal(None)
+
+        if self.match(TokenType.IDENTIFIER):
+            return Variable(self.previous())
+
         if self.match(TokenType.LEFT_PAREN):
             expr = self.expression()
             self.consume(TokenType.RIGHT_PAREN, "Expected ')' after expression.")
@@ -121,7 +157,7 @@ class Parser:
             return Literal(self.previous().literal)
 
         tok = self.peek()
-        error(tok.line, tok, "Expected string, number, true, false, or '('.")
+        error(tok.line, tok, "Expected expression.")
         raise ParseErr()
 
 

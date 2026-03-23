@@ -57,7 +57,7 @@ class Scanner:
                 self.advance()
                 self.add_token(TokenType.EQUAL_EQUAL)
             else:
-                error(self.line, msg="Unexpected character '='. Only '==' is supported.")
+                self.add_token(TokenType.EQUAL)
             return
         if c == "<":
             if self.peek() == "=":
@@ -109,17 +109,19 @@ class Scanner:
         text = self.source[self.start:self.current]
         keywords = {
             "print": TokenType.PRINT,
+            "var": TokenType.VAR,
             "and": TokenType.AND,
             "or": TokenType.OR,
             "true": TokenType.TRUE,
             "false": TokenType.FALSE,
+            "nil": TokenType.NIL,
         }
         
         if text in keywords:
             self.add_token(keywords[text])
             return
 
-        error(self.line, msg=f"Unexpected identifier '{text}'.")
+        self.add_token(TokenType.IDENTIFIER)
 
     def scan_number(self) -> None:
         while self.peek().isdigit():

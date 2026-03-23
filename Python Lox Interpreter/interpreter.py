@@ -1,11 +1,33 @@
 from visitor import Visitor
-from expressions import Binary, Grouping, Literal, Logical, Unary
-from statements import Print
+from expressions import Assign, Binary, Grouping, Literal, Logical, Unary, Variable
+from statements import Expression, Print, Var
 from token_type import TokenType
 from error import RuntimeErr, error
 
 
+class Environment:
+    def __init__(self) -> None:
+        self.values: dict[str, object] = {}
+
+    def define(self, name: str, value: object) -> None:
+        self.values[name] = value
+
+    def get(self, name_token) -> object:
+        if name_token.lexeme in self.values:
+            return self.values[name_token.lexeme]
+        raise RuntimeErr(name_token, f"Undefined variable '{name_token.lexeme}'.")
+
+    def assign(self, name_token, value: object) -> None:
+        if name_token.lexeme in self.values:
+            self.values[name_token.lexeme] = value
+            return
+        raise RuntimeErr(name_token, f"Undefined variable '{name_token.lexeme}'.")
+
+
 class Interpreter(Visitor):
+    def __init__(self) -> None:
+        self.environment = Environment()
+
     def interpret(self, statements) -> None:
         try:
             for stmt in statements:
@@ -87,6 +109,25 @@ class Interpreter(Visitor):
 
         raise RuntimeErr(expr.operator, "Unknown unary operator.")
 
+    def visit_variable_expr(self, expr: Variable) -> object:
+        return self.environment.get(expr.name)
+
+    def visit_assign_expr(self, expr: Assign) -> object:
+        value = expr.value.accept(self)
+        self.environment.assign(expr.name, value)
+        return value
+
+    def visit_var_stmt(self, stmt: Var) -> object:
+        value = None
+        if stmt.initializer is not None:
+            value = stmt.initializer.accept(self)
+        self.environment.define(stmt.name.lexeme, value)
+        return None
+
+    def visit_expression_stmt(self, stmt: Expression) -> object:
+        stmt.expression.accept(self)
+        return None
+
     def is_truthy(self, value: object) -> bool:
         if value is None or value is False:
             return False
@@ -106,5 +147,5 @@ class Interpreter(Visitor):
                 return text[:-2]
             return text
         if value is None:
-            return "nil"
+            return ""
         return str(value)

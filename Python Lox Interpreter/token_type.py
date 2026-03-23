@@ -1,10 +1,12 @@
 from enum import Enum, auto
-
-
+#defines tokens used by scanner/parser, initialized with auto() to automatically assign values later on
 class TokenType(Enum):
     PRINT = auto()
+    VAR = auto()
     STRING = auto()
     NUMBER = auto()
+    IDENTIFIER = auto()
+    EQUAL = auto()
     LEFT_PAREN = auto()
     RIGHT_PAREN = auto()
     PLUS = auto()
@@ -22,5 +24,6 @@ class TokenType(Enum):
     OR = auto()
     TRUE = auto()
     FALSE = auto()
+    NIL = auto()
     SEMICOLON = auto()
     EOF = auto()

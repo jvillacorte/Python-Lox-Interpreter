@@ -52,3 +52,20 @@ class Unary(Expor):
 
     def accept(self, visitor):
         return visitor.visit_unary_expr(self)
+
+
+class Variable(Expor):
+    def __init__(self, name: Token) -> None:
+        self.name = name
+
+    def accept(self, visitor):
+        return visitor.visit_variable_expr(self)
+
+
+class Assign(Expor):
+    def __init__(self, name: Token, value: Expor) -> None:
+        self.name = name
+        self.value = value
+
+    def accept(self, visitor):
+        return visitor.visit_assign_expr(self)
