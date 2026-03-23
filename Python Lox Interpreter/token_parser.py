@@ -1,5 +1,5 @@
 from token_type import TokenType
-from expressions import Literal
+from expressions import Binary, Grouping, Literal
 from statements import Print, Stmt
 from error import ParseErr, error
 
@@ -35,11 +35,39 @@ class Parser:
 
     #parses expression, string literals rn
     def expression(self):
-        if self.match(TokenType.STRING):
+        return self.term()
+
+    def term(self):
+        expr = self.factor()
+
+        while self.match(TokenType.PLUS, TokenType.MINUS):
+            operator = self.previous()
+            right = self.factor()
+            expr = Binary(expr, operator, right)
+
+        return expr
+
+    def factor(self):
+        expr = self.primary()
+
+        while self.match(TokenType.STAR, TokenType.SLASH):
+            operator = self.previous()
+            right = self.primary()
+            expr = Binary(expr, operator, right)
+
+        return expr
+
+    def primary(self):
+        if self.match(TokenType.LEFT_PAREN):
+            expr = self.expression()
+            self.consume(TokenType.RIGHT_PAREN, "Expected ')' after expression.")
+            return Grouping(expr)
+
+        if self.match(TokenType.STRING, TokenType.NUMBER):
             return Literal(self.previous().literal)
 
         tok = self.peek()
-        error(tok.line, tok, "Expected string literal.")
+        error(tok.line, tok, "Expected string or number literal.")
         raise ParseErr()
 
 

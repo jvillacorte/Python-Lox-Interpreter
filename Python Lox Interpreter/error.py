@@ -2,6 +2,14 @@ from sys import stderr
 
 had_err = False
 
+
+class RuntimeErr(Exception):
+    def __init__(self, token, message: str) -> None:
+        self.token = token
+        self.message = message
+        super().__init__(self.message)
+
+
 class ParseErr(Exception):
     pass
 

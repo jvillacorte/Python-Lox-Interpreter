@@ -27,11 +27,32 @@ class Scanner:
         if c == "\n":
             self.line += 1
             return
+        if c == "(":
+            self.add_token(TokenType.LEFT_PAREN)
+            return
+        if c == ")":
+            self.add_token(TokenType.RIGHT_PAREN)
+            return
+        if c == "+":
+            self.add_token(TokenType.PLUS)
+            return
+        if c == "-":
+            self.add_token(TokenType.MINUS)
+            return
+        if c == "*":
+            self.add_token(TokenType.STAR)
+            return
+        if c == "/":
+            self.add_token(TokenType.SLASH)
+            return
         if c == ";":
             self.add_token(TokenType.SEMICOLON)
             return
         if c == '"':
             self.scan_string()
+            return
+        if c.isdigit():
+            self.scan_number()
             return
         if c.isalpha() or c == "_":
             self.scan_identifier()
@@ -64,6 +85,18 @@ class Scanner:
 
         error(self.line, msg=f"Unexpected identifier '{text}'.")
 
+    def scan_number(self) -> None:
+        while self.peek().isdigit():
+            self.advance()
+
+        if self.peek() == "." and self.peek_next().isdigit():
+            self.advance()
+            while self.peek().isdigit():
+                self.advance()
+
+        value = float(self.source[self.start:self.current])
+        self.add_token(TokenType.NUMBER, value)
+
     def add_token(self, token_type: TokenType, literal: object = None) -> None:
         lexeme = self.source[self.start:self.current]
         self.tokens.append(Token(token_type, lexeme, literal, self.line))
@@ -80,3 +113,8 @@ class Scanner:
         if self.is_at_end():
             return "\0"
         return self.source[self.current]
+
+    def peek_next(self) -> str:
+        if self.current + 1 >= len(self.source):
+            return "\0"
+        return self.source[self.current + 1]
