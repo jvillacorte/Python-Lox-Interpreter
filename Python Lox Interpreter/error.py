@@ -1,0 +1,23 @@
+from sys import stderr
+
+had_err = False
+
+class ParseErr(Exception):
+    pass
+
+def set_err_status(value: bool) -> None:
+    global had_err
+    had_err = value
+
+def get_err_status() -> bool:
+    return had_err
+
+def report(line: int, where: str, message: str) -> None:
+    print(f'[line {line}] Error{where}: {message}', file=stderr)
+    set_err_status(True)
+
+def error(line: int, token=None, msg: str = "Error") -> None:
+    if token is None:
+        report(line, "", msg)
+    else:
+        report(token.line, f" at '{token.lexeme}'", msg)
