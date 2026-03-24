@@ -222,10 +222,14 @@ class Interpreter(Visitor):
         stmt.expression.accept(self)
         return None
 
+    #executes block statements, creates new environment for block with 
+    # enclosing environment as current environment, executes block statements in new environment, then restores previous environment
     def visit_block_stmt(self, stmt: Block) -> object:
         self.execute_block(stmt.statements, Environment(self.environment))
         return None
 
+    #evaluates if statement executes then branch if condition is truthy
+    #else executes else branch if condition is falsy and else branch exists, else does nothing
     def visit_if_stmt(self, stmt: If) -> object:
         if self.is_truthy(stmt.condition.accept(self)):
             stmt.then_branch.accept(self)
@@ -233,6 +237,7 @@ class Interpreter(Visitor):
             stmt.else_branch.accept(self)
         return None
 
+    #evaluates loop conditions, continues to execute while condition is truthy, else exits loop
     def visit_while_stmt(self, stmt: While) -> object:
         while self.is_truthy(stmt.condition.accept(self)):
             stmt.body.accept(self)
@@ -243,6 +248,7 @@ class Interpreter(Visitor):
         self.environment.define(stmt.name.lexeme, function)
         return None
 
+    #prevents returning from top-level code, evaluates return value if exists
     def visit_return_stmt(self, stmt: Return) -> object:
         if self.function_depth == 0:
             raise RuntimeErr(stmt.keyword, "Cannot return from top-level code.")

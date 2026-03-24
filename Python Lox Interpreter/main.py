@@ -7,6 +7,8 @@ from token_parser import Parser
 from interpreter import Interpreter
 
 
+#runs one script, exits with error code if error occurs
+#if valid call run_script with path to script as argument
 def main() -> None:
     if len(argv) != 2:
         print("Usage: python main.py <script>")
@@ -14,7 +16,14 @@ def main() -> None:
 
     run_script(argv[1])
 
-
+#read source file
+#scan text into tokens
+#stop if there's errors
+#parse tokens into statements
+#stops if there's errors
+#interpret AST
+#stop if runtime error occurs
+#runs main when executed directly, not imported as module
 def run_script(path: str) -> None:
     with open(path, "r", encoding="utf-8") as f:
         source = f.read()

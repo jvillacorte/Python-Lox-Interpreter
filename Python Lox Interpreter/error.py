@@ -2,7 +2,6 @@ from sys import stderr
 
 had_err = False
 
-
 class RuntimeErr(Exception):
     def __init__(self, token, message: str) -> None:
         self.token = token
