@@ -23,8 +23,11 @@ def report(line: int, where: str, message: str) -> None:
     print(f'[line {line}] Error{where}: {message}', file=stderr)
     set_err_status(True)
 
-def error(line: int, token=None, msg: str = "Error") -> None:
-    if token is None:
-        report(line, "", msg)
-    else:
+def error(line: int | None = None, token=None, msg: str = "Error") -> None:
+    if token is not None:
         report(token.line, f" at '{token.lexeme}'", msg)
+        return
+
+    if line is None:
+        line = 0
+    report(line, "", msg)

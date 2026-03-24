@@ -40,7 +40,7 @@ class Parser:
             while True:
                 if len(parameters) >= 255:
                     tok = self.peek()
-                    error(tok.line, tok, "Cannot have more than 255 parameters.")
+                    error(token=tok, msg="Cannot have more than 255 parameters.")
                     raise ParseErr()
                 parameters.append(self.consume(TokenType.IDENTIFIER, "Expected parameter name."))
                 if not self.match(TokenType.COMMA):
@@ -59,7 +59,8 @@ class Parser:
         self.consume(TokenType.SEMICOLON, "Expected ';' after variable declaration.")
         return Var(name, initializer)
 
-    #parses statement, currently print statements only
+    #parses statements, checks for statement type by looking at first token
+    #then calls appropriate parsing function
     def statement(self) -> Stmt:
         if self.match(TokenType.FOR):
             return self.for_statement()
@@ -80,7 +81,7 @@ class Parser:
 
         initializer = None
         if self.match(TokenType.SEMICOLON):
-            initializer = None
+            pass
         elif self.match(TokenType.VAR):
             initializer = self.var_declaration()
         else:
@@ -174,7 +175,7 @@ class Parser:
             if isinstance(expr, Variable):
                 return Assign(expr.name, value)
 
-            error(equals.line, equals, "Invalid assignment target.")
+            error(token=equals, msg="Invalid assignment target.")
             raise ParseErr()
 
         return expr
@@ -264,7 +265,7 @@ class Parser:
             while True:
                 if len(arguments) >= 255:
                     tok = self.peek()
-                    error(tok.line, tok, "Cannot have more than 255 arguments.")
+                    error(token=tok, msg="Cannot have more than 255 arguments.")
                     raise ParseErr()
                 arguments.append(self.expression())
                 if not self.match(TokenType.COMMA):
@@ -295,7 +296,7 @@ class Parser:
             return Literal(self.previous().literal)
 
         tok = self.peek()
-        error(tok.line, tok, "Expected expression.")
+        error(token=tok, msg="Expected expression.")
         raise ParseErr()
 
 
@@ -311,7 +312,7 @@ class Parser:
         if self.check(token_type):
             return self.advance()
         tok = self.peek()
-        error(tok.line, tok, msg)
+        error(token=tok, msg=msg)
         raise ParseErr()
 
     #looks at current token and checks if it matches expected type, returns false if EOF
