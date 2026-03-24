@@ -1,14 +1,15 @@
 from visitor import Visitor
-from expressions import Assign, Binary, Grouping, Literal, Logical, Unary, Variable
-from statements import Expression, Print, Var
+from expressions import Assign, Binary, Call, Grouping, Literal, Logical, Unary, Variable
+from statements import Block, Expression, Function, If, Print, Return, Var, While
 from token_type import TokenType
 from error import RuntimeErr, error
 
 
 class Environment:
     #storage map for variables
-    def __init__(self) -> None:
+    def __init__(self, enclosing=None) -> None:
         self.values: dict[str, object] = {}
+        self.enclosing = enclosing
 
     #define new variable in environment with name and value
     def define(self, name: str, value: object) -> None:
@@ -18,6 +19,8 @@ class Environment:
     def get(self, name_token) -> object:
         if name_token.lexeme in self.values:
             return self.values[name_token.lexeme]
+        if self.enclosing is not None:
+            return self.enclosing.get(name_token)
         raise RuntimeErr(name_token, f"Undefined variable '{name_token.lexeme}'.")
 
     #update value of existing variable in environment, else returns error
@@ -25,13 +28,57 @@ class Environment:
         if name_token.lexeme in self.values:
             self.values[name_token.lexeme] = value
             return
+        if self.enclosing is not None:
+            self.enclosing.assign(name_token, value)
+            return
         raise RuntimeErr(name_token, f"Undefined variable '{name_token.lexeme}'.")
+
+
+class LoxCallable:
+    def arity(self) -> int:
+        raise NotImplementedError
+
+    def call(self, interpreter, arguments: list[object]) -> object:
+        raise NotImplementedError
+
+
+class ReturnSignal(Exception):
+    def __init__(self, value: object) -> None:
+        self.value = value
+
+
+class LoxFunction(LoxCallable):
+    def __init__(self, declaration: Function, closure: Environment) -> None:
+        self.declaration = declaration
+        self.closure = closure
+
+    def arity(self) -> int:
+        return len(self.declaration.params)
+
+    def call(self, interpreter, arguments: list[object]) -> object:
+        environment = Environment(self.closure)
+        for i, param in enumerate(self.declaration.params):
+            environment.define(param.lexeme, arguments[i])
+
+        interpreter.function_depth += 1
+        try:
+            interpreter.execute_block(self.declaration.body, environment)
+        except ReturnSignal as signal:
+            return signal.value
+        finally:
+            interpreter.function_depth -= 1
+
+        return None
+
+    def __str__(self) -> str:
+        return f"<fn {self.declaration.name.lexeme}>"
 
 
 class Interpreter(Visitor):
     #create interpreter with environment instance
     def __init__(self) -> None:
         self.environment = Environment()
+        self.function_depth = 0
 
     #iterate through parsed statements, executing each, except runtime errors, which are caught and throw an error message
     def interpret(self, statements) -> None:
@@ -40,6 +87,15 @@ class Interpreter(Visitor):
                 stmt.accept(self)
         except RuntimeErr as err:
             error(err.token.line, err.token, err.message)
+
+    def execute_block(self, statements: list, environment: Environment) -> None:
+        previous = self.environment
+        try:
+            self.environment = environment
+            for stmt in statements:
+                stmt.accept(self)
+        finally:
+            self.environment = previous
 
     #execute print statement, evaluate expression, convecrt to user-facing string and print to console
     def visit_print_stmt(self, stmt: Print) -> None:
@@ -137,6 +193,21 @@ class Interpreter(Visitor):
         self.environment.assign(expr.name, value)
         return value
 
+    def visit_call_expr(self, expr: Call) -> object:
+        callee = expr.callee.accept(self)
+        arguments = [argument.accept(self) for argument in expr.arguments]
+
+        if not isinstance(callee, LoxCallable):
+            raise RuntimeErr(expr.paren, "Can only call functions.")
+
+        if len(arguments) != callee.arity():
+            raise RuntimeErr(
+                expr.paren,
+                f"Expected {callee.arity()} arguments but got {len(arguments)}.",
+            )
+
+        return callee.call(self, arguments)
+
     #variable declaration in statement, default nil value if nothing initialized
     def visit_var_stmt(self, stmt: Var) -> object:
         value = None
@@ -150,6 +221,36 @@ class Interpreter(Visitor):
     def visit_expression_stmt(self, stmt: Expression) -> object:
         stmt.expression.accept(self)
         return None
+
+    def visit_block_stmt(self, stmt: Block) -> object:
+        self.execute_block(stmt.statements, Environment(self.environment))
+        return None
+
+    def visit_if_stmt(self, stmt: If) -> object:
+        if self.is_truthy(stmt.condition.accept(self)):
+            stmt.then_branch.accept(self)
+        elif stmt.else_branch is not None:
+            stmt.else_branch.accept(self)
+        return None
+
+    def visit_while_stmt(self, stmt: While) -> object:
+        while self.is_truthy(stmt.condition.accept(self)):
+            stmt.body.accept(self)
+        return None
+
+    def visit_function_stmt(self, stmt: Function) -> object:
+        function = LoxFunction(stmt, self.environment)
+        self.environment.define(stmt.name.lexeme, function)
+        return None
+
+    def visit_return_stmt(self, stmt: Return) -> object:
+        if self.function_depth == 0:
+            raise RuntimeErr(stmt.keyword, "Cannot return from top-level code.")
+
+        value = None
+        if stmt.value is not None:
+            value = stmt.value.accept(self)
+        raise ReturnSignal(value)
 
     #false and false = false, everything else true
     def is_truthy(self, value: object) -> bool:

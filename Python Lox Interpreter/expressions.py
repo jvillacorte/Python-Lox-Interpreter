@@ -53,7 +53,7 @@ class Unary(Expor):
     def accept(self, visitor):
         return visitor.visit_unary_expr(self)
 
-
+#reads/stores variables, returning current value
 class Variable(Expor):
     def __init__(self, name: Token) -> None:
         self.name = name
@@ -61,7 +61,7 @@ class Variable(Expor):
     def accept(self, visitor):
         return visitor.visit_variable_expr(self)
 
-
+#writes new value over existing value of variable
 class Assign(Expor):
     def __init__(self, name: Token, value: Expor) -> None:
         self.name = name
@@ -69,3 +69,13 @@ class Assign(Expor):
 
     def accept(self, visitor):
         return visitor.visit_assign_expr(self)
+
+#function calls, ex. add(1, 2) parses as call expression with callee "add" and arguments 1 and 2
+class Call(Expor):
+    def __init__(self, callee: Expor, paren: Token, arguments: list[Expor]) -> None:
+        self.callee = callee
+        self.paren = paren
+        self.arguments = arguments
+
+    def accept(self, visitor):
+        return visitor.visit_call_expr(self)

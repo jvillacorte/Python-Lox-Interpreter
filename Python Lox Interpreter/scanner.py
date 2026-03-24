@@ -33,6 +33,15 @@ class Scanner:
         if c == ")":
             self.add_token(TokenType.RIGHT_PAREN)
             return
+        if c == ",":
+            self.add_token(TokenType.COMMA)
+            return
+        if c == "{":
+            self.add_token(TokenType.LEFT_BRACE)
+            return
+        if c == "}":
+            self.add_token(TokenType.RIGHT_BRACE)
+            return
         if c == "+":
             self.add_token(TokenType.PLUS)
             return
@@ -43,7 +52,12 @@ class Scanner:
             self.add_token(TokenType.STAR)
             return
         if c == "/":
-            self.add_token(TokenType.SLASH)
+            if self.peek() == "/":
+                # Consume comment text until end of line.
+                while self.peek() != "\n" and not self.is_at_end():
+                    self.advance()
+            else:
+                self.add_token(TokenType.SLASH)
             return
         if c == "!":
             if self.peek() == "=":
@@ -109,6 +123,12 @@ class Scanner:
         text = self.source[self.start:self.current]
         keywords = {
             "print": TokenType.PRINT,
+            "if": TokenType.IF,
+            "else": TokenType.ELSE,
+            "while": TokenType.WHILE,
+            "for": TokenType.FOR,
+            "fun": TokenType.FUN,
+            "return": TokenType.RETURN,
             "var": TokenType.VAR,
             "and": TokenType.AND,
             "or": TokenType.OR,

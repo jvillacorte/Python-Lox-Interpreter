@@ -34,6 +34,9 @@ def run_script(path: str) -> None:
     interpreter = Interpreter()
     interpreter.interpret(statements)
 
+    if get_err_status():
+        exit(70)
+
 
 if __name__ == "__main__":
     main()
