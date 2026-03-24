@@ -2,7 +2,7 @@ from token_cls import Token
 from token_type import TokenType
 from error import error
 
-
+#keywords and their token types
 KEYWORDS = {
     "print": TokenType.PRINT,
     "if": TokenType.IF,
